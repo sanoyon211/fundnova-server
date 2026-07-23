@@ -6,6 +6,7 @@ import healthRouter from './routes/health.route.js';
 import authRouter from './routes/auth.route.js';
 import campaignRouter from './routes/campaign.route.js';
 import contributionRouter from './routes/contribution.route.js';
+import paymentRouter from './routes/payment.route.js';
 import { errorHandler } from './middleware/error.middleware.js';
 import { ENV } from './config/env.config.js';
 
@@ -39,6 +40,7 @@ app.use('/api', healthRouter);
 app.use('/api/auth', authRouter);
 app.use('/api/campaigns', campaignRouter);
 app.use('/api/contributions', contributionRouter);
+app.use('/api/payments', paymentRouter);
 
 // Global Error Handler
 app.use(errorHandler);
