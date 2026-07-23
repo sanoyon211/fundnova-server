@@ -93,5 +93,7 @@ const campaignSchema = new Schema<ICampaignDocument>(
 
 // Index for top funded campaigns query optimization
 campaignSchema.index({ status: 1, amountRaised: -1 });
+campaignSchema.index({ status: 1, deadline: 1, category: 1 });
+campaignSchema.index({ title: 'text', story: 'text' });
 
 export const Campaign = mongoose.model<ICampaignDocument>('Campaign', campaignSchema);
