@@ -9,6 +9,7 @@ import contributionRouter from './routes/contribution.route.js';
 import paymentRouter from './routes/payment.route.js';
 import withdrawalRouter from './routes/withdrawal.route.js';
 import adminRouter from './routes/admin.route.js';
+import notificationRouter from './routes/notification.route.js';
 import { errorHandler } from './middleware/error.middleware.js';
 import { ENV } from './config/env.config.js';
 
@@ -45,6 +46,7 @@ app.use('/api/contributions', contributionRouter);
 app.use('/api/payments', paymentRouter);
 app.use('/api/withdrawals', withdrawalRouter);
 app.use('/api/admin', adminRouter);
+app.use('/api/notifications', notificationRouter);
 
 // Global Error Handler
 app.use(errorHandler);
