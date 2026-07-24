@@ -66,7 +66,7 @@ export class AuthService {
   static async getProfile(userId: string) {
     const user = await User.findById(userId);
     if (!user) {
-      throw new AppError('User profile not found', 44);
+      throw new AppError('User profile not found', 404);
     }
     return user;
   }
