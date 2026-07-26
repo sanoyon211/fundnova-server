@@ -11,7 +11,7 @@ import uploadRoutes from './routes/upload.routes.js';
 import contributionRouter from './routes/contribution.route.js';
 import paymentRoutes from './routes/payment.routes.js';
 import withdrawalRouter from './routes/withdrawal.route.js';
-import adminRouter from './routes/admin.route.js';
+import adminRoutes from './routes/admin.routes.js';
 import notificationRouter from './routes/notification.route.js';
 import reportRouter from './routes/report.route.js';
 import { errorHandler } from './middleware/error.middleware.js';
@@ -54,7 +54,7 @@ app.use('/api/upload', uploadRoutes);
 app.use('/api/contributions', contributionRouter);
 app.use('/api/payments', paymentRoutes);
 app.use('/api/withdrawals', withdrawalRouter);
-app.use('/api/admin', adminRouter);
+app.use('/api/admin', adminRoutes);
 app.use('/api/notifications', notificationRouter);
 app.use('/api/reports', reportRouter);
 
