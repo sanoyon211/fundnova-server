@@ -3,7 +3,7 @@ import cors from 'cors';
 import helmet from 'helmet';
 import rateLimit from 'express-rate-limit';
 import healthRouter from './routes/health.route.js';
-import authRouter from './routes/auth.route.js';
+import authRoutes from './routes/auth.routes.js';
 import campaignRouter from './routes/campaign.route.js';
 import contributionRouter from './routes/contribution.route.js';
 import paymentRouter from './routes/payment.route.js';
@@ -41,7 +41,7 @@ app.use(express.urlencoded({ extended: true }));
 
 // API Routes
 app.use('/api', healthRouter);
-app.use('/api/auth', authRouter);
+app.use('/api/auth', authRoutes);
 app.use('/api/campaigns', campaignRouter);
 app.use('/api/contributions', contributionRouter);
 app.use('/api/payments', paymentRouter);
