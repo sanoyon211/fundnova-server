@@ -2,6 +2,7 @@ import { Request, Response, NextFunction } from 'express';
 import { Pledge } from '../models/pledge.model.js';
 import { Campaign } from '../models/campaign.model.js';
 import { AppError } from '../errors/app-error.js';
+import { sendPledgeConfirmation } from '../utils/email.js';
 
 export const createPledge = async (
   req: Request,
@@ -42,6 +43,13 @@ export const createPledge = async (
     await Campaign.findByIdAndUpdate(targetCampaignId, {
       $inc: { raisedAmount: amount },
     });
+
+    // Send confirmation email asynchronously (non-blocking)
+    if (req.user?.email) {
+      sendPledgeConfirmation(req.user.email, amount, campaign.title).catch((err) => {
+        console.warn('[Email non-blocking error]:', err);
+      });
+    }
 
     res.status(201).json({
       success: true,

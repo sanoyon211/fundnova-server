@@ -2,24 +2,36 @@ import { User } from '../models/user.model.js';
 import { Campaign } from '../models/campaign.model.js';
 import { Withdrawal } from '../models/withdrawal.model.js';
 import { Payment } from '../models/payment.model.js';
+import { Pledge } from '../models/pledge.model.js';
 import { Notification } from '../models/notification.model.js';
 import { Report } from '../models/report.model.js';
 import { AppError } from '../errors/app-error.js';
 import { UserRole } from '../types/user.types.js';
+import { sendCampaignStatusUpdate } from '../utils/email.js';
 
 export class AdminService {
   static async getPlatformStats() {
-    const [totalSupporters, totalCreators, userCreditsAgg, totalPaymentsAgg] = await Promise.all([
-      User.countDocuments({ role: 'supporter' }),
-      User.countDocuments({ role: 'creator' }),
-      User.aggregate([{ $group: { _id: null, totalCredits: { $sum: '$credits' } } }]),
-      Payment.aggregate([{ $match: { status: 'succeeded' } }, { $group: { _id: null, totalAmount: { $sum: '$amount' } } }]),
-    ]);
+    const [totalUsers, totalCampaigns, totalPledgesAgg, totalPaymentsAgg, totalSupporters, totalCreators] =
+      await Promise.all([
+        User.countDocuments(),
+        Campaign.countDocuments(),
+        Pledge.aggregate([{ $group: { _id: null, totalPledges: { $sum: '$amount' } } }]),
+        Payment.aggregate([
+          { $match: { status: 'succeeded' } },
+          { $group: { _id: null, totalAmount: { $sum: '$amount' } } },
+        ]),
+        User.countDocuments({ role: 'supporter' }),
+        User.countDocuments({ role: 'creator' }),
+      ]);
 
     return {
+      totalUsers,
+      totalCampaigns,
+      totalPledgesVolume: totalPledgesAgg[0]?.totalPledges || 0,
+      totalRevenue: totalPaymentsAgg[0]?.totalAmount || 0,
       totalSupporters,
       totalCreators,
-      totalAvailableCredits: userCreditsAgg[0]?.totalCredits || 0,
+      totalAvailableCredits: (await User.aggregate([{ $group: { _id: null, sum: { $sum: '$credits' } } }]))[0]?.sum || 0,
       totalPaymentsProcessed: totalPaymentsAgg[0]?.totalAmount || 0,
     };
   }
@@ -34,21 +46,37 @@ export class AdminService {
     return campaigns;
   }
 
-  static async updateCampaignStatus(campaignId: string, status: 'approved' | 'rejected') {
+  static async updateCampaignStatus(
+    campaignId: string,
+    status: 'approved' | 'rejected' | 'active' | 'closed' | 'suspended'
+  ) {
     const campaign = await Campaign.findById(campaignId);
     if (!campaign) {
       throw new AppError('Campaign not found', 404);
     }
 
-    campaign.status = status;
+    campaign.status = status as any;
     await campaign.save();
 
-    // Create notification for creator
+    const recipientEmail =
+      campaign.creatorEmail ||
+      (typeof campaign.creator === 'object' && (campaign.creator as any)?.email
+        ? (campaign.creator as any).email
+        : '');
+
+    // Create notification record for creator
     await Notification.create({
       message: `Your campaign "${campaign.title}" has been ${status} by the platform administrator.`,
-      toEmail: campaign.creatorEmail,
+      toEmail: recipientEmail || 'creator@fundnova.io',
       actionRoute: '/dashboard/creator/my-campaigns',
     });
+
+    // Send transactional status update email asynchronously (non-blocking)
+    if (recipientEmail) {
+      sendCampaignStatusUpdate(recipientEmail, campaign.title, status).catch((err) => {
+        console.warn('[Email non-blocking error]:', err);
+      });
+    }
 
     return campaign;
   }
@@ -68,18 +96,15 @@ export class AdminService {
       throw new AppError(`Withdrawal request is already ${withdrawal.status}`, 400);
     }
 
-    // Mark withdrawal request as approved
     withdrawal.status = 'approved';
     await withdrawal.save();
 
-    // Business Logic: Deduct creator's raised credits on success
     const creator = await User.findOne({ email: withdrawal.creatorEmail });
     if (creator) {
       creator.raisedCredits = Math.max(0, (creator.raisedCredits || 0) - withdrawal.withdrawalCredit);
       await creator.save();
     }
 
-    // Send notification to creator
     await Notification.create({
       message: `Your withdrawal request of ${withdrawal.withdrawalCredit} credits ($${withdrawal.withdrawalAmount}) via ${withdrawal.paymentSystem} was approved and processed successfully!`,
       toEmail: withdrawal.creatorEmail,

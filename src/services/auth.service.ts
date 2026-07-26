@@ -2,6 +2,7 @@ import { User, IUserDocument } from '../models/user.model.js';
 import { RegisterInput, LoginInput } from '../validators/auth.validator.js';
 import { AppError } from '../errors/app-error.js';
 import { generateToken } from '../utils/jwt.util.js';
+import { sendWelcomeEmail } from '../utils/email.js';
 
 export class AuthService {
   static async register(input: RegisterInput) {
@@ -26,6 +27,11 @@ export class AuthService {
       role: input.role,
       credits: initialCredits,
       raisedCredits: 0,
+    });
+
+    // Trigger Welcome Email asynchronously (non-blocking)
+    sendWelcomeEmail(newUser.email, newUser.name).catch((err) => {
+      console.warn('[Email non-blocking error]:', err);
     });
 
     const token = generateToken({

@@ -15,14 +15,15 @@ router.post(
         throw new AppError('No image file uploaded', 400);
       }
 
-      const fileUrl = `/uploads/${req.file.filename}`;
+      // If uploaded to Cloudinary, req.file.path is the absolute HTTPS URL. Otherwise fallback to relative /uploads/
+      const fileUrl = (req.file as any).path || `/uploads/${req.file.filename}`;
 
       res.status(200).json({
         success: true,
         message: 'Image uploaded successfully',
         data: {
           url: fileUrl,
-          filename: req.file.filename,
+          filename: req.file.filename || (req.file as any).originalname,
           size: req.file.size,
           mimetype: req.file.mimetype,
         },
