@@ -6,8 +6,10 @@ export interface IUser {
   email: string;
   password?: string;
   photoUrl?: string;
+  avatar?: string;
   role: UserRole;
   credits: number;
+  creditBalance: number;
   raisedCredits?: number;
   createdAt?: Date;
   updatedAt?: Date;
