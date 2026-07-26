@@ -10,6 +10,7 @@ import paymentRouter from './routes/payment.route.js';
 import withdrawalRouter from './routes/withdrawal.route.js';
 import adminRouter from './routes/admin.route.js';
 import notificationRouter from './routes/notification.route.js';
+import reportRouter from './routes/report.route.js';
 import { errorHandler } from './middleware/error.middleware.js';
 import { ENV } from './config/env.config.js';
 
@@ -21,7 +22,7 @@ app.use(helmet());
 // CORS Configuration
 app.use(
   cors({
-    origin: [ENV.CLIENT_URL, 'http://localhost:3000'],
+    origin: [ENV.CLIENT_URL, 'http://localhost:3000'].filter(Boolean),
     credentials: true,
   })
 );
@@ -47,6 +48,7 @@ app.use('/api/payments', paymentRouter);
 app.use('/api/withdrawals', withdrawalRouter);
 app.use('/api/admin', adminRouter);
 app.use('/api/notifications', notificationRouter);
+app.use('/api/reports', reportRouter);
 
 // Global Error Handler
 app.use(errorHandler);

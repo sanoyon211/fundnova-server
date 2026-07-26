@@ -17,7 +17,7 @@ export class PaymentService {
           amount: Math.round(input.amount * 100), // convert to cents
           currency: 'usd',
           metadata: {
-            credits: input.credits,
+            credits: String(input.credits),
           },
         });
 
@@ -48,6 +48,15 @@ export class PaymentService {
       throw new AppError('Supporter account not found', 404);
     }
 
+    // Avoid duplicate payment processing for transactionId
+    const existingPayment = await Payment.findOne({ transactionId: input.transactionId });
+    if (existingPayment) {
+      return {
+        payment: existingPayment,
+        newTotalCredits: supporter.credits,
+      };
+    }
+
     // Add purchased credits to Supporter's account
     supporter.credits += input.credits;
     await supporter.save();
@@ -72,5 +81,37 @@ export class PaymentService {
   static async getUserPaymentHistory(userEmail: string) {
     const history = await Payment.find({ userEmail }).sort({ createdAt: -1 });
     return history;
+  }
+
+  static async handleStripeWebhook(payload: Buffer, sig: string, webhookSecret: string) {
+    try {
+      const event = stripe.webhooks.constructEvent(payload, sig, webhookSecret);
+      if (event.type === 'payment_intent.succeeded') {
+        const paymentIntent = event.data.object as Stripe.PaymentIntent;
+        const userEmail = paymentIntent.receipt_email || paymentIntent.metadata?.userEmail;
+        const credits = Number(paymentIntent.metadata?.credits || 0);
+
+        if (userEmail && credits > 0) {
+          const supporter = await User.findOne({ email: userEmail });
+          if (supporter) {
+            supporter.credits += credits;
+            await supporter.save();
+
+            await Payment.create({
+              transactionId: paymentIntent.id,
+              userEmail,
+              userName: supporter.name,
+              amount: paymentIntent.amount / 100,
+              credits,
+              paymentMethod: 'Stripe Webhook',
+              status: 'succeeded',
+            });
+          }
+        }
+      }
+      return { received: true };
+    } catch (err: any) {
+      throw new AppError(`Stripe Webhook Error: ${err.message}`, 400);
+    }
   }
 }

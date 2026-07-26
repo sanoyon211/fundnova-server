@@ -1,5 +1,6 @@
 import { Request, Response, NextFunction } from 'express';
 import { AdminService } from '../services/admin.service.js';
+import { CampaignService } from '../services/campaign.service.js';
 import { UserRole } from '../types/user.types.js';
 
 export class AdminController {
@@ -31,6 +32,20 @@ export class AdminController {
     }
   }
 
+  static async getAllCampaigns(_req: Request, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const campaigns = await AdminService.getAllCampaigns();
+
+      res.status(200).json({
+        success: true,
+        message: 'All platform campaigns fetched successfully',
+        data: campaigns,
+      });
+    } catch (error) {
+      next(error);
+    }
+  }
+
   static async updateCampaignStatus(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
       const campaignId = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
@@ -44,6 +59,26 @@ export class AdminController {
         success: true,
         message: `Campaign status updated to ${status}`,
         data: campaign,
+      });
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  static async deleteCampaign(req: Request, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const user = req.user!;
+      const campaignId = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
+      const result = await CampaignService.deleteCampaign(
+        String(campaignId),
+        user.email,
+        user.role
+      );
+
+      res.status(200).json({
+        success: true,
+        message: 'Campaign deleted and supporter contributions refunded',
+        data: result,
       });
     } catch (error) {
       next(error);
@@ -117,6 +152,35 @@ export class AdminController {
       res.status(200).json({
         success: true,
         message: 'User account removed from database successfully',
+        data: result,
+      });
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  static async getReports(_req: Request, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const reports = await AdminService.getReports();
+
+      res.status(200).json({
+        success: true,
+        message: 'Fraud reports fetched successfully',
+        data: reports,
+      });
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  static async deleteReport(req: Request, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const reportId = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
+      const result = await AdminService.deleteReport(String(reportId));
+
+      res.status(200).json({
+        success: true,
+        message: 'Report deleted successfully',
         data: result,
       });
     } catch (error) {

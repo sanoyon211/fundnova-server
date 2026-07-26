@@ -3,6 +3,7 @@ import { Campaign } from '../models/campaign.model.js';
 import { Withdrawal } from '../models/withdrawal.model.js';
 import { Payment } from '../models/payment.model.js';
 import { Notification } from '../models/notification.model.js';
+import { Report } from '../models/report.model.js';
 import { AppError } from '../errors/app-error.js';
 import { UserRole } from '../types/user.types.js';
 
@@ -25,6 +26,11 @@ export class AdminService {
 
   static async getPendingCampaigns() {
     const campaigns = await Campaign.find({ status: 'pending' }).sort({ createdAt: -1 });
+    return campaigns;
+  }
+
+  static async getAllCampaigns() {
+    const campaigns = await Campaign.find().sort({ createdAt: -1 });
     return campaigns;
   }
 
@@ -110,5 +116,20 @@ export class AdminService {
 
     await User.findByIdAndDelete(userId);
     return { id: userId, deleted: true };
+  }
+
+  static async getReports() {
+    const reports = await Report.find().sort({ createdAt: -1 });
+    return reports;
+  }
+
+  static async deleteReport(reportId: string) {
+    const report = await Report.findById(reportId);
+    if (!report) {
+      throw new AppError('Report not found', 404);
+    }
+
+    await Report.findByIdAndDelete(reportId);
+    return { id: reportId, deleted: true };
   }
 }

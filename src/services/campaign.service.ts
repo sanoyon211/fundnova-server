@@ -1,4 +1,7 @@
 import { Campaign } from '../models/campaign.model.js';
+import { Contribution } from '../models/contribution.model.js';
+import { User } from '../models/user.model.js';
+import { Notification } from '../models/notification.model.js';
 import { CreateCampaignInput, UpdateCampaignInput } from '../validators/campaign.validator.js';
 import { AppError } from '../errors/app-error.js';
 
@@ -82,9 +85,32 @@ export class CampaignService {
       throw new AppError('Unauthorized: You do not have permission to delete this campaign', 403);
     }
 
-    // Business Logic: Delete triggers refund of all approved supporter contributions
-    // (Integrates with Contribution model once created in BE-06)
+    // Business Logic: Delete triggers refund of all approved & pending supporter contributions
+    const contributions = await Contribution.find({
+      campaignId: id,
+      status: { $in: ['approved', 'pending'] },
+    });
+
+    let refundedCount = 0;
+    for (const contribution of contributions) {
+      const supporter = await User.findOne({ email: contribution.supporterEmail });
+      if (supporter) {
+        supporter.credits += contribution.contributionAmount;
+        await supporter.save();
+
+        await Notification.create({
+          message: `Campaign "${campaign.title}" was removed. Your pledge of ${contribution.contributionAmount} credits has been fully refunded to your balance.`,
+          toEmail: contribution.supporterEmail,
+          actionRoute: '/dashboard/supporter/contributions',
+        });
+      }
+
+      contribution.status = 'rejected';
+      await contribution.save();
+      refundedCount++;
+    }
+
     await Campaign.findByIdAndDelete(id);
-    return { id, refunded: true };
+    return { id, refundedCount, refunded: true };
   }
 }
