@@ -53,18 +53,47 @@ export const createCampaign = async (
 };
 
 export const getAllCampaigns = async (
-  _req: Request,
+  req: Request,
   res: Response,
   next: NextFunction
 ): Promise<void> => {
   try {
-    const campaigns = await Campaign.find()
+    const { category, search, sort, status } = req.query;
+
+    const filter: any = {};
+
+    if (category && category !== 'All' && typeof category === 'string') {
+      filter.category = { $regex: new RegExp(`^${category}$`, 'i') };
+    }
+
+    if (search && typeof search === 'string') {
+      filter.$or = [
+        { title: { $regex: search, $options: 'i' } },
+        { description: { $regex: search, $options: 'i' } },
+        { story: { $regex: search, $options: 'i' } },
+      ];
+    }
+
+    if (status && typeof status === 'string') {
+      filter.status = status;
+    }
+
+    let sortOptions: any = { createdAt: -1 };
+    if (sort === 'most_funded') {
+      sortOptions = { raisedAmount: -1, amountRaised: -1, createdAt: -1 };
+    } else if (sort === 'least_funded') {
+      sortOptions = { raisedAmount: 1, amountRaised: 1, createdAt: -1 };
+    } else if (sort === 'oldest') {
+      sortOptions = { createdAt: 1 };
+    }
+
+    const campaigns = await Campaign.find(filter)
       .populate('creator', 'name avatar')
-      .sort({ createdAt: -1 });
+      .sort(sortOptions);
 
     res.status(200).json({
       success: true,
-      message: 'All campaigns fetched successfully',
+      message: 'Campaigns fetched successfully',
       data: campaigns,
     });
   } catch (error) {
