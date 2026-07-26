@@ -2,10 +2,12 @@ import express, { Application } from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
 import rateLimit from 'express-rate-limit';
+import path from 'path';
 import healthRouter from './routes/health.route.js';
 import authRoutes from './routes/auth.routes.js';
 import campaignRoutes from './routes/campaign.routes.js';
 import pledgeRoutes from './routes/pledge.routes.js';
+import uploadRoutes from './routes/upload.routes.js';
 import contributionRouter from './routes/contribution.route.js';
 import paymentRouter from './routes/payment.route.js';
 import withdrawalRouter from './routes/withdrawal.route.js';
@@ -40,11 +42,15 @@ app.use('/api', limiter);
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
+// Serve Static Uploads
+app.use('/uploads', express.static(path.join(process.cwd(), 'public/uploads')));
+
 // API Routes
 app.use('/api', healthRouter);
 app.use('/api/auth', authRoutes);
 app.use('/api/campaigns', campaignRoutes);
 app.use('/api/pledges', pledgeRoutes);
+app.use('/api/upload', uploadRoutes);
 app.use('/api/contributions', contributionRouter);
 app.use('/api/payments', paymentRouter);
 app.use('/api/withdrawals', withdrawalRouter);
