@@ -1,99 +1,148 @@
 import mongoose, { Schema, Document } from 'mongoose';
-import { CampaignCategory, CampaignStatus } from '../types/campaign.types.js';
+
+export type CampaignStatus = 'active' | 'funded' | 'closed' | 'pending' | 'approved' | 'rejected' | 'completed';
+
+export interface ICampaign {
+  title: string;
+  description: string;
+  goalAmount: number;
+  raisedAmount: number;
+  creator: mongoose.Types.ObjectId;
+  status: CampaignStatus;
+  deadline: Date;
+  category: string;
+  coverImage: string;
+  createdAt?: Date;
+  updatedAt?: Date;
+
+  // Compatibility fields
+  story?: string;
+  fundingGoal?: number;
+  amountRaised?: number;
+  minimumContribution?: number;
+  creatorId?: mongoose.Types.ObjectId;
+  creatorName?: string;
+  creatorEmail?: string;
+  imageUrl?: string;
+}
 
 export interface ICampaignDocument extends Document {
   title: string;
-  story: string;
-  category: CampaignCategory;
-  fundingGoal: number;
-  minimumContribution: number;
+  description: string;
+  goalAmount: number;
+  raisedAmount: number;
+  creator: mongoose.Types.ObjectId;
+  status: CampaignStatus;
   deadline: Date;
-  rewardInfo: string;
-  imageUrl: string;
+  category: string;
+  coverImage: string;
+  createdAt: Date;
+  updatedAt: Date;
+
+  // Compatibility fields
+  story: string;
+  fundingGoal: number;
   amountRaised: number;
+  minimumContribution: number;
   creatorId: mongoose.Types.ObjectId;
   creatorName: string;
   creatorEmail: string;
-  status: CampaignStatus;
-  createdAt: Date;
-  updatedAt: Date;
+  imageUrl: string;
 }
 
 const campaignSchema = new Schema<ICampaignDocument>(
   {
     title: {
       type: String,
-      required: [true, 'Campaign title is required'],
+      required: [true, 'Title is required'],
       trim: true,
     },
-    story: {
+    description: {
       type: String,
-      required: [true, 'Campaign story description is required'],
+      required: [true, 'Description is required'],
+      trim: true,
     },
-    category: {
-      type: String,
-      enum: ['Technology', 'Art', 'Community', 'Health', 'Education', 'Environment'],
-      required: [true, 'Category is required'],
-      index: true,
-    },
-    fundingGoal: {
+    goalAmount: {
       type: Number,
-      required: [true, 'Funding goal credits is required'],
-      min: [1, 'Funding goal must be at least 1 credit'],
+      required: [true, 'Goal amount is required'],
+      min: [0.01, 'Goal amount must be greater than 0'],
     },
-    minimumContribution: {
-      type: Number,
-      required: [true, 'Minimum contribution amount is required'],
-      min: [1, 'Minimum contribution must be at least 1 credit'],
-    },
-    deadline: {
-      type: Date,
-      required: [true, 'Deadline date is required'],
-      index: true,
-    },
-    rewardInfo: {
-      type: String,
-      required: [true, 'Reward info is required'],
-    },
-    imageUrl: {
-      type: String,
-      required: [true, 'Cover image URL is required'],
-    },
-    amountRaised: {
+    raisedAmount: {
       type: Number,
       default: 0,
-      index: true,
+      min: [0, 'Raised amount cannot be negative'],
     },
-    creatorId: {
+    creator: {
       type: Schema.Types.ObjectId,
       ref: 'User',
-      required: true,
-      index: true,
-    },
-    creatorName: {
-      type: String,
-      required: true,
-    },
-    creatorEmail: {
-      type: String,
-      required: true,
+      required: [true, 'Creator is required'],
       index: true,
     },
     status: {
       type: String,
-      enum: ['pending', 'approved', 'rejected', 'completed'],
-      default: 'pending',
+      enum: ['active', 'funded', 'closed', 'pending', 'approved', 'rejected', 'completed'],
+      default: 'active',
       index: true,
     },
+    deadline: {
+      type: Date,
+      required: [true, 'Deadline is required'],
+      index: true,
+    },
+    category: {
+      type: String,
+      required: [true, 'Category is required'],
+      trim: true,
+      index: true,
+    },
+    coverImage: {
+      type: String,
+      required: [true, 'Cover image is required'],
+      trim: true,
+    },
+    // Optional compatibility attributes
+    creatorName: { type: String, default: '' },
+    creatorEmail: { type: String, default: '' },
+    minimumContribution: { type: Number, default: 1 },
   },
   {
     timestamps: true,
+    toJSON: { virtuals: true },
+    toObject: { virtuals: true },
   }
 );
 
-// Index for top funded campaigns query optimization
-campaignSchema.index({ status: 1, amountRaised: -1 });
-campaignSchema.index({ status: 1, deadline: 1, category: 1 });
-campaignSchema.index({ title: 'text', story: 'text' });
+// Virtual properties for legacy/compatibility aliases
+campaignSchema.virtual('story').get(function (this: ICampaignDocument) {
+  return this.description;
+}).set(function (this: ICampaignDocument, val: string) {
+  this.description = val;
+});
+
+campaignSchema.virtual('fundingGoal').get(function (this: ICampaignDocument) {
+  return this.goalAmount;
+}).set(function (this: ICampaignDocument, val: number) {
+  this.goalAmount = val;
+});
+
+campaignSchema.virtual('amountRaised').get(function (this: ICampaignDocument) {
+  return this.raisedAmount;
+}).set(function (this: ICampaignDocument, val: number) {
+  this.raisedAmount = val;
+});
+
+campaignSchema.virtual('imageUrl').get(function (this: ICampaignDocument) {
+  return this.coverImage;
+}).set(function (this: ICampaignDocument, val: string) {
+  this.coverImage = val;
+});
+
+campaignSchema.virtual('creatorId').get(function (this: ICampaignDocument) {
+  return this.creator;
+});
+
+// Indexes for query performance
+campaignSchema.index({ status: 1, raisedAmount: -1 });
+campaignSchema.index({ category: 1, status: 1 });
 
 export const Campaign = mongoose.model<ICampaignDocument>('Campaign', campaignSchema);
