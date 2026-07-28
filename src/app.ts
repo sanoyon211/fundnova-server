@@ -53,6 +53,16 @@ try {
   // Ignore filesystem static serve errors in read-only serverless environments
 }
 
+// Root Welcome Route
+app.get('/', (_req, res) => {
+  res.json({
+    success: true,
+    message: '🚀 FundNova Express API Server is Live and Running!',
+    healthCheck: '/api/health',
+    campaigns: '/api/campaigns',
+  });
+});
+
 // API Routes
 app.use('/api', healthRouter);
 app.use('/api/auth', authRoutes);
