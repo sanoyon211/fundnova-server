@@ -30,20 +30,24 @@ if (isCloudinaryConfigured) {
     } as any,
   });
 } else {
-  const uploadDir = path.join(process.cwd(), 'public/uploads');
-  if (!fs.existsSync(uploadDir)) {
-    fs.mkdirSync(uploadDir, { recursive: true });
+  try {
+    const uploadDir = path.join(process.cwd(), 'public/uploads');
+    if (!fs.existsSync(uploadDir)) {
+      fs.mkdirSync(uploadDir, { recursive: true });
+    }
+    storage = multer.diskStorage({
+      destination: (_req, _file, cb) => {
+        cb(null, uploadDir);
+      },
+      filename: (_req, file, cb) => {
+        const uniqueSuffix = `${Date.now()}-${Math.round(Math.random() * 1e9)}`;
+        cb(null, `file-${uniqueSuffix}${path.extname(file.originalname)}`);
+      },
+    });
+  } catch (err) {
+    // Memory storage fallback for read-only serverless filesystems (e.g., Vercel Lambda /var/task)
+    storage = multer.memoryStorage();
   }
-
-  storage = multer.diskStorage({
-    destination: (_req, _file, cb) => {
-      cb(null, uploadDir);
-    },
-    filename: (_req, file, cb) => {
-      const uniqueSuffix = `${Date.now()}-${Math.round(Math.random() * 1e9)}`;
-      cb(null, `file-${uniqueSuffix}${path.extname(file.originalname)}`);
-    },
-  });
 }
 
 const fileFilter = (_req: any, file: Express.Multer.File, cb: multer.FileFilterCallback) => {

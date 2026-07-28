@@ -3,6 +3,7 @@ import cors from 'cors';
 import helmet from 'helmet';
 import rateLimit from 'express-rate-limit';
 import path from 'path';
+import fs from 'fs';
 import healthRouter from './routes/health.routes';
 import authRoutes from './routes/auth.routes';
 import campaignRoutes from './routes/campaign.routes';
@@ -42,8 +43,15 @@ app.use('/api', limiter);
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-// Serve Static Uploads
-app.use('/uploads', express.static(path.join(process.cwd(), 'public/uploads')));
+// Serve Static Uploads safely for local / serverless
+try {
+  const uploadsPath = path.join(process.cwd(), 'public/uploads');
+  if (fs.existsSync(uploadsPath)) {
+    app.use('/uploads', express.static(uploadsPath));
+  }
+} catch (e) {
+  // Ignore filesystem static serve errors in read-only serverless environments
+}
 
 // API Routes
 app.use('/api', healthRouter);
