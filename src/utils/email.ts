@@ -2,25 +2,32 @@ import nodemailer from 'nodemailer';
 
 const smtpHost = process.env.SMTP_HOST || 'smtp.ethereal.email';
 const smtpPort = Number(process.env.SMTP_PORT) || 587;
-const smtpUser = process.env.SMTP_USER || 'mock_user';
-const smtpPass = process.env.SMTP_PASS || 'mock_pass';
+const smtpUser = process.env.SMTP_USER || '';
+const smtpPass = process.env.SMTP_PASS || '';
 const fromEmail = process.env.EMAIL_FROM || '"FundNova Platform" <no-reply@fundnova.io>';
+const isMockSmtp = !smtpUser || smtpUser === 'mock_user';
 
-const transporter = nodemailer.createTransport({
-  host: smtpHost,
-  port: smtpPort,
-  secure: smtpPort === 465,
-  auth: {
-    user: smtpUser,
-    pass: smtpPass,
-  },
-});
+const transporter = !isMockSmtp
+  ? nodemailer.createTransport({
+      host: smtpHost,
+      port: smtpPort,
+      secure: smtpPort === 465,
+      auth: {
+        user: smtpUser,
+        pass: smtpPass,
+      },
+    })
+  : null;
 
 /**
  * Send Welcome Email on user registration
  */
 export async function sendWelcomeEmail(email: string, name: string): Promise<void> {
   try {
+    if (!transporter) {
+      console.log(`[Email Notification Simulated] Welcome email queued for ${email} (${name})`);
+      return;
+    }
     const htmlContent = `
       <div style="font-family: 'Segoe UI', Arial, sans-serif; max-width: 600px; margin: 0 auto; background: #ffffff; border-radius: 16px; overflow: hidden; border: 1px solid #e2e8f0;">
         <div style="background: linear-gradient(135deg, #2563EB 0%, #06B6D4 100%); padding: 32px 24px; text-align: center; color: #ffffff;">
@@ -67,6 +74,10 @@ export async function sendPledgeConfirmation(
   campaignTitle: string
 ): Promise<void> {
   try {
+    if (!transporter) {
+      console.log(`[Email Notification Simulated] Pledge confirmation (${amount} credits) queued for ${email}`);
+      return;
+    }
     const htmlContent = `
       <div style="font-family: 'Segoe UI', Arial, sans-serif; max-width: 600px; margin: 0 auto; background: #ffffff; border-radius: 16px; overflow: hidden; border: 1px solid #e2e8f0;">
         <div style="background: linear-gradient(135deg, #2563EB 0%, #06B6D4 100%); padding: 32px 24px; text-align: center; color: #ffffff;">
@@ -112,6 +123,10 @@ export async function sendCampaignStatusUpdate(
   status: string
 ): Promise<void> {
   try {
+    if (!transporter) {
+      console.log(`[Email Notification Simulated] Campaign status update (${status}) queued for ${email}`);
+      return;
+    }
     const isApproved = status === 'approved' || status === 'active';
     const headerBg = isApproved
       ? 'linear-gradient(135deg, #059669 0%, #10B981 100%)'
