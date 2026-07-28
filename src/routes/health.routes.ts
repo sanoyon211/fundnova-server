@@ -1,5 +1,5 @@
 import { Router, Request, Response, NextFunction } from 'express';
-import { seedDatabase } from '../utils/seed.js';
+import { seedDatabase } from '../utils/seed';
 
 const router = Router();
 
@@ -16,11 +16,10 @@ router.get('/health', (_req: Request, res: Response) => {
 
 router.post('/seed', async (_req: Request, res: Response, next: NextFunction) => {
   try {
-    const seeded = await seedDatabase();
+    await seedDatabase();
     res.status(200).json({
       success: true,
-      message: `Successfully seeded ${seeded.length} dynamic campaigns into MongoDB!`,
-      data: seeded,
+      message: 'Successfully seeded platform users, campaigns, and notifications into MongoDB!',
     });
   } catch (error) {
     next(error);
