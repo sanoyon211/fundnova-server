@@ -1,6 +1,7 @@
 import { Request, Response, NextFunction } from 'express';
 import { Pledge } from '../models/pledge.model.js';
 import { Campaign } from '../models/campaign.model.js';
+import { User } from '../models/user.model.js';
 import { AppError } from '../errors/app-error.js';
 import { sendPledgeConfirmation } from '../utils/email.js';
 
@@ -30,6 +31,19 @@ export const createPledge = async (
     if (!campaign) {
       throw new AppError('Campaign not found', 404);
     }
+
+    // Verify and deduct user credits
+    const supporter = await User.findById(userId);
+    if (!supporter) {
+      throw new AppError('User not found', 404);
+    }
+
+    if ((supporter.credits || 0) < amount) {
+      throw new AppError(`Insufficient credit balance. You have ${supporter.credits || 0} credits, but required ${amount} credits.`, 400);
+    }
+
+    supporter.credits = (supporter.credits || 0) - amount;
+    await supporter.save();
 
     const pledge = await Pledge.create({
       campaign: targetCampaignId,
