@@ -51,8 +51,35 @@ export const getMe = async (req: Request, res: Response, next: NextFunction): Pr
   }
 };
 
+export const socialLogin = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+  try {
+    const { name, email, photoUrl, provider, role } = req.body;
+
+    if (!email || !name) {
+      throw new AppError('Email and name are required for social login', 400);
+    }
+
+    const result = await AuthService.socialLogin({
+      name,
+      email,
+      photoUrl,
+      provider: provider || 'social',
+      role,
+    });
+
+    res.status(200).json({
+      success: true,
+      message: 'Social login successful',
+      data: result,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
 export class AuthController {
   static register = register;
   static login = login;
   static getMe = getMe;
+  static socialLogin = socialLogin;
 }

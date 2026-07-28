@@ -76,4 +76,51 @@ export class AuthService {
     }
     return user;
   }
+
+  static async socialLogin(input: {
+    name: string;
+    email: string;
+    photoUrl?: string;
+    provider: string;
+    role?: 'supporter' | 'creator';
+  }) {
+    let user = await User.findOne({ email: input.email.toLowerCase() });
+
+    if (!user) {
+      const selectedRole = input.role || 'supporter';
+      let initialCredits = 50;
+      if (selectedRole === 'creator') {
+        initialCredits = 20;
+      }
+
+      user = await User.create({
+        name: input.name,
+        email: input.email.toLowerCase(),
+        photoUrl: input.photoUrl || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&q=80&w=200',
+        avatar: input.photoUrl || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&q=80&w=200',
+        role: selectedRole,
+        credits: initialCredits,
+        raisedCredits: 0,
+      });
+
+      sendWelcomeEmail(user.email, user.name).catch((err) => {
+        console.warn('[Email non-blocking error]:', err);
+      });
+    } else if (input.photoUrl && (!user.photoUrl || user.photoUrl.includes('unsplash'))) {
+      user.photoUrl = input.photoUrl;
+      user.avatar = input.photoUrl;
+      await user.save();
+    }
+
+    const token = generateToken({
+      userId: user._id.toString(),
+      email: user.email,
+      role: user.role,
+    });
+
+    const userObject = user.toObject();
+    delete userObject.password;
+
+    return { user: userObject, token };
+  }
 }
