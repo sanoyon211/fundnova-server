@@ -1,6 +1,6 @@
 import mongoose from 'mongoose';
-import { ENV } from './env.config.js';
-import { User } from '../models/user.model.js';
+import { ENV } from './env.config';
+import { User } from '../models/user.model';
 
 export const seedInitialUsers = async (): Promise<void> => {
   try {
@@ -54,24 +54,24 @@ export const seedInitialUsers = async (): Promise<void> => {
 };
 
 export const connectDatabase = async (): Promise<void> => {
+  // Reuse existing connection if already connected in serverless container
+  if (mongoose.connection.readyState >= 1) {
+    return;
+  }
+
   try {
-    mongoose.connection.on('disconnected', () => {
-      console.warn('⚠️ [Database] Mongoose disconnected from MongoDB');
-    });
+    const mongoUri = ENV.MONGO_URI || process.env.MONGODB_URI || process.env.MONGO_URI || '';
+    if (!mongoUri) {
+      console.error('⚠️ [Database] MONODB_URI is missing in environment variables');
+      return;
+    }
 
-    mongoose.connection.on('reconnected', () => {
-      console.log('🔄 [Database] Mongoose reconnected to MongoDB');
-    });
-
-    const conn = await mongoose.connect(ENV.MONGO_URI);
+    const conn = await mongoose.connect(mongoUri);
     console.log(`✅ [Database] MongoDB Connected: ${conn.connection.host} [DB: ${conn.connection.name}]`);
 
     // Seed initial users
     await seedInitialUsers();
   } catch (error) {
     console.error('❌ [Database] MongoDB connection error:', error);
-    if (ENV.NODE_ENV === 'production') {
-      process.exit(1);
-    }
   }
 };
